@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/MainWindow">
+        <file>image/load.png</file>
+        <file>image/load_hover.png</file>
+        <file>image/load_pressed.png</file>
+        <file>image/clear.png</file>
+        <file>image/clear_hover.png</file>
+        <file>image/clear_pressed.png</file>
+        <file>image/kill.png</file>
+        <file>image/kill_hover.png</file>
+        <file>image/kill_pressed.png</file>
+        <file>image/run.png</file>
+        <file>image/run_hover.png</file>
+        <file>image/run_pressed.png</file>
+    </qresource>
+</RCC>
