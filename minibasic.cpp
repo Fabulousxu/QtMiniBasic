@@ -4,13 +4,20 @@ void MiniBasic::set_code(qsizetype line, const QString &code) {
 	auto [flag, pos] = find_line(line);
 	auto [err_flag, err_pos] = find_err_line(line);
 	QString err_str;
-	token_node *token;
-	stmt_node *stmt;
+	token_node *token = nullptr;
+	stmt_node *stmt = nullptr;
 	QStringList tree;
 	std::function<void()> proc;
 
-	try { stmt = gen_stmt(token = scanner(code)); }
-	catch (QString err) { err_str = err; stmt = nullptr; }
+	try { token = scan(code); }
+	catch (token_node *err) { 
+		token = err;
+		err_str = "illegal character.";
+	}
+	if (err_str.isEmpty()) {
+		try { stmt = gen_stmt(token); }
+		catch (QString err) { err_str = err; }
+	}
 	if (!err_str.isEmpty()) {
 		if (!err_flag) {
 			err_line.insert(err_pos, line);
@@ -26,18 +33,19 @@ void MiniBasic::set_code(qsizetype line, const QString &code) {
 		tree = stmt ? stmt->to_strlist() : QStringList{ "" };
 	}
 	if (flag) {
-		code_seq[pos] = to_str(token);
+		code_seq[pos] = to_HTML(token);
 		tree_seq[pos] = tree;
 		if (stmt_seq[pos]) { delete stmt_seq[pos]; }
 		stmt_seq[pos] = stmt;
 		proc_seq[pos] = proc;
 	} else {
 		line_seq.insert(pos, line);
-		code_seq.insert(pos, to_str(token));
+		code_seq.insert(pos, to_HTML(token));
 		tree_seq.insert(pos, tree);
 		stmt_seq.insert(pos, stmt);
 		proc_seq.insert(pos, proc);
 	}
+	delete token;
 	if (!err_str.isEmpty()) { throw err_str; }
 }
 
@@ -56,7 +64,6 @@ void MiniBasic::rm_code(qsizetype line) {
 void MiniBasic::load(const QString &filename) {
 	QFile *file = new QFile(filename);
 	if (!file->open(QIODevice::ReadOnly | QIODevice::Text)) { throw QString("no such file."); }
-	clear();
 	QString code;
 	qsizetype line;
 	bool isNum;
@@ -72,7 +79,6 @@ void MiniBasic::load(const QString &filename) {
 }
 
 void MiniBasic::run() {
-	for (auto &stmt : stmt_seq) { if (stmt) { stmt->zero_out(); } }
 	if (!err_line.isEmpty()) { throw QString("exist syntax error, can't run."); }
 	for (curr_pos = 0, eval.clear(); curr_pos < proc_seq.size(); ++curr_pos) {
 		try { proc_seq[curr_pos](); }
@@ -81,7 +87,13 @@ void MiniBasic::run() {
 		}
 	}
 	curr_pos = 0;
-	eval.clear();
+}
+
+void MiniBasic::kill()
+{
+	eval.clear(); 
+	curr_pos = proc_seq.size();
+	for (auto &stmt : stmt_seq) { if (stmt) { stmt->zero_out(); } }
 }
 
 void MiniBasic::clear() {
@@ -93,9 +105,10 @@ void MiniBasic::clear() {
 	err_line.clear();
 	err_seq.clear();
 	curr_pos = 0;
+	eval.clear();
 }
 
-QStringList MiniBasic::code_strlist() {
+QStringList MiniBasic::code_HTML() {
 	QStringList codes;
 	if (code_seq.empty()) { return codes; }
 	qsizetype max_length = QString::number(line_seq.back()).length();
@@ -108,7 +121,7 @@ QStringList MiniBasic::code_strlist() {
 	return codes;
 }
 
-QStringList MiniBasic::tree_strlist() {
+QStringList MiniBasic::tree_HTML() {
 	QStringList trees, tree;
 	if (tree_seq.empty()) { return trees; }
 	qsizetype max_length = QString::number(line_seq.back()).length();
@@ -121,12 +134,20 @@ QStringList MiniBasic::tree_strlist() {
 		if (stmt_seq[i]) {
 			switch (stmt_seq[i]->type) {
 				case STMT_REM: break;
-				case STMT_LET: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((let_stmt *)stmt_seq[i])->count) + "</font>"); break;
+				case STMT_LET:
+					tree[0].push_back("&nbsp;<font color=deeppink>" +
+						QString::number(((let_stmt *)stmt_seq[i])->count) + "</font>");
+					tree[1].push_back("&nbsp;<font color=purple>" +
+						QString::number(eval.get_num(((let_stmt *)stmt_seq[i])->var)) + "</font>");
+					break;
 				case STMT_PRINT: tree[0].push_back("&nbsp;<font color=deeppink>" +
 					QString::number(((print_stmt *)stmt_seq[i])->count) + "</font>"); break;
-				case STMT_INPUT: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((input_stmt *)stmt_seq[i])->count) + "</font>"); break;
+				case STMT_INPUT:
+					tree[0].push_back("&nbsp;<font color=deeppink>" +
+						QString::number(((input_stmt *)stmt_seq[i])->count) + "</font>");
+					tree[1].push_back("&nbsp;<font color=deeppink>" +
+						QString::number(eval.get_num(((input_stmt *)stmt_seq[i])->var)) + "</font>");
+					break;
 				case STMT_GOTO: tree[0].push_back("&nbsp;<font color=deeppink>" +
 					QString::number(((goto_stmt *)stmt_seq[i])->count) + "</font>"); break;
 				case STMT_END: tree[0].push_back("&nbsp;<font color=deeppink>" +

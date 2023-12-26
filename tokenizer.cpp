@@ -1,6 +1,6 @@
 #include "tokenizer.h"
 
-token_node *scanner(const QString &code) {
+token_node *scan(const QString &code) {
     token_node *head = nullptr, *curr = nullptr;
 #define APPEND(new_node) \
     if (head) { \
@@ -76,15 +76,15 @@ token_node *scanner(const QString &code) {
         } else if (*it == ')') {
             APPEND(new op_token(RPAREN));
         } else {
-            delete head;
-            throw "illegal character.";
+            APPEND(new str_token(code.mid(it - code.begin()).trimmed()));
+            throw head;
         }
     }
     return head;
 #undef APPEND
 }
 
-QString to_str(token_node *token) {
+QString to_HTML(token_node *token) {
     QString str;
     for (; token; token = token->next) {
         if (token->type == TK_KEYWORD) {

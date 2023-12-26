@@ -1,6 +1,6 @@
 #pragma once
 
-#include <qstring.h>
+#include <QtCore/qstring.h>
 
 enum token_t { TK_KEYWORD, TK_IDENTIFIER, TK_CONSTANT, TK_OPERATOR, TK_STRING };
 enum keyword_t { KW_REM, KW_LET, KW_PRINT, KW_INPUT, KW_GOTO, KW_IF, KW_THEN, KW_END };
@@ -40,6 +40,6 @@ struct str_token : token_node {
 	str_token(const QString &val) : token_node(TK_STRING), val(val) {}
 };
 
-token_node *scanner(const QString &code);
+token_node *scan(const QString &code);
 
-QString to_str(token_node *token);
+QString to_HTML(token_node *token);

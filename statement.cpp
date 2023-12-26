@@ -9,7 +9,7 @@ QStringList let_stmt::to_strlist() const {
     QStringList exp_strlist = exp->to_strlist();
     for (QString &line : exp_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
     return QStringList{ "<font color=skyblue>LET</font>&nbsp;<font color=grey>=</font>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;" + var } + exp_strlist;
+        "&nbsp;&nbsp;&nbsp;&nbsp;<font color=yellow>" + var + "</font>" } + exp_strlist;
 }
 
 QStringList print_stmt::to_strlist() const {

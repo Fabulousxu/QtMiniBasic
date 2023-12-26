@@ -1,8 +1,8 @@
 #pragma once
 
 #include "tokenizer.h"
-#include <qstack.h>
-#include <qstringlist.h>
+#include <QtCore/qstack.h>
+#include <QtCore/qstringlist.h>
 
 enum exp_t { EXP_VARIABLE, EXP_NUMBER, EXP_OPERATOR };
 

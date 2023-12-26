@@ -4,7 +4,8 @@ qint64 eval_state::get_val(exp_node *exp) {
 	if (exp->type == EXP_NUMBER) { return ((num_exp *)exp)->val; }
 	if (exp->type == EXP_VARIABLE) {
 		if (var_map.contains(((var_exp *)exp)->val)) {
-			return var_map[((var_exp *)exp)->val];
+			++var_map[((var_exp *)exp)->val].second;
+			return var_map[((var_exp *)exp)->val].first;
 		} else { throw "variable \"" + ((var_exp *)exp)->val + "\" is being used without initialized."; }
 	}
 
@@ -59,8 +60,23 @@ qint64 eval_state::get_val(exp_node *exp) {
 #undef NOT_ZERO_OP
 }
 
-qint64 eval_state::get_val(QString var_name) {
-	if (var_map.contains(var_name)) {
-		return var_map[var_name];
-	} else { throw "variable \"" + var_name + "\" hasn't been defined."; }
+qint64 eval_state::get_val(QString var) {
+	if (var_map.contains(var)) {
+		return var_map[var].first;
+	} else { throw "variable \"" + var + "\" hasn't been defined."; }
+}
+
+qsizetype eval_state::get_num(QString var)
+{
+	if (var_map.contains(var)) {
+		return var_map[var].second;
+	} else return 0;
+}
+
+void eval_state::set_val(QString name, qint64 val)
+{
+	if (var_map.contains(name)) {
+		++var_map[name].second;
+	} else { var_map[name].second = 0; }
+	var_map[name].first = val;
 }

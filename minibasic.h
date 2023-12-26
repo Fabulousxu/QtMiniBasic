@@ -18,13 +18,14 @@ public:
 	void clear();
 
 	void run();
-	void kill() { eval.clear(); curr_pos = proc_seq.size(); }
+	void kill();
 
-	QStringList code_strlist();
-	QStringList tree_strlist();
+	QStringList code_HTML();
+	QStringList tree_HTML();
 
 private:
 	eval_state eval;
+	qsizetype curr_pos;
 	QList<qsizetype> line_seq;
 	QStringList code_seq;
 	QList<QStringList> tree_seq;
@@ -32,7 +33,6 @@ private:
 	QList<std::function<void()>> proc_seq;
 	QList<qsizetype> err_line;
 	QStringList err_seq;
-	qsizetype curr_pos;
 
 	QPair<bool, qsizetype> find_line(qsizetype line) const;
 	QPair<bool, qsizetype> find_err_line(qsizetype line) const;

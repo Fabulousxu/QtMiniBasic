@@ -83,9 +83,11 @@ border: 0px solid white;
 image: url(:/MainWindow/image/load.png);
 }
 QPushButton:hover {
+border: 0px solid white;
 image: url(:/MainWindow/image/load_hover.png);
 }
 QPushButton:pressed {
+border: 0px solid white;
 image: url(:/MainWindow/image/load_pressed.png);
 }
 </string>
@@ -109,9 +111,11 @@ border: 0px solid white;
 image: url(:/MainWindow/image/run.png);
 }
 QPushButton:hover {
+border: 0px solid white;
 image: url(:/MainWindow/image/run_hover.png);
 }
 QPushButton:pressed {
+border: 0px solid white;
 image: url(:/MainWindow/image/run_pressed.png);
 }
 </string>
@@ -141,9 +145,11 @@ border: 0px solid white;
 image: url(:/MainWindow/image/clear.png);
 }
 QPushButton:hover {
+border: 0px solid white;
 image: url(:/MainWindow/image/clear_hover.png);
 }
 QPushButton:pressed {
+border: 0px solid white;
 image: url(:/MainWindow/image/clear_pressed.png);
 }
 </string>
