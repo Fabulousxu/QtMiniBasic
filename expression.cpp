@@ -1,24 +1,24 @@
 #include "expression.h"
 
-QStringList var_exp::to_strlist() const {
+QStringList var_exp::to_HTML() const {
 	return QStringList{ "<font color=white>" + val + "</font>" };
 }
 
-QStringList num_exp::to_strlist() const {
+QStringList num_exp::to_HTML() const {
 	return QStringList{ "<font color=darkorange>" + QString::number(val) + "</font>" };
 }
 
-QStringList unary_exp::to_strlist() const {
-	QStringList child_strlist = child->to_strlist();
-	for (QString &line : child_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+QStringList unary_exp::to_HTML() const {
+	QStringList child_strlist = child->to_HTML();
+	for (QString &line_seq : child_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
 	return QStringList{ "<font color=gold>" + op_str[val] + "</font>" } + child_strlist;
 }
 
-QStringList bin_exp::to_strlist() const {
-	QStringList left_strlist = left->to_strlist();
-	QStringList right_strlist = right->to_strlist();
-	for (QString &line : left_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-	for (QString &line : right_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+QStringList bin_exp::to_HTML() const {
+	QStringList left_strlist = left->to_HTML();
+	QStringList right_strlist = right->to_HTML();
+	for (QString &line_seq : left_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+	for (QString &line_seq : right_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
 	return QStringList{ "<font color=gold>" + op_str[val] + "</font>" } + left_strlist + right_strlist;
 }
 

@@ -77,7 +77,7 @@ token_node *scan(const QString &code) {
             APPEND(new op_token(RPAREN));
         } else {
             APPEND(new str_token(code.mid(it - code.begin()).trimmed()));
-            throw head;
+            throw QPair<token_node *, QString>(head, "illegal character.");
         }
     }
     return head;

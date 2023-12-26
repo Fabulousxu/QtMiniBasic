@@ -34,8 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
             run();
         } else {
             ui->console->insertHtml("<font color=white>kill</font>");
-            ui->console->append("<font color=lightgreen>minibasic>&nbsp;</font>");
             kill();
+            ui->console->append("<font color=lightgreen>minibasic>&nbsp;</font>");
         }
         });
 
@@ -72,7 +72,8 @@ void MainWindow::update_tree() {
     for (auto &line : basic.tree_HTML()) { ui->tree->append("<div>" + line + "</div>"); }
 }
 
-void MainWindow::set_code(qsizetype line, const QString &code) {
+void MainWindow::set_code(size_t line, const QString &code) {
+    if (isRun) { kill(); }
     if (line < 0) {
         ui->console->append("<font color=red>error:&nbsp;</font>line number must be positive.");
         return;
@@ -80,35 +81,43 @@ void MainWindow::set_code(qsizetype line, const QString &code) {
     try { basic.set_code(line, code); }
     catch (QString err) {
         ui->console->append("<font color=red>warning:&nbsp;</font>code exist syntax error -- " + err);
-    } update_code();
+    }
+    update_code();
 }
 
-void MainWindow::rm_code(qsizetype line) {
+void MainWindow::rm_code(size_t line) {
+    if (isRun) { kill(); }
     try { basic.rm_code(line); }
     catch (QString err) {
         ui->console->append("<font color=red>error:&nbsp;</font>" + err);
         return;
-    } update_code();
+    }
+    update_code();
 }
 
 void MainWindow::load(const QString &filename) {
-    kill();
+    if (isRun) { kill(); }
     try { basic.load(filename); }
     catch (QString err) {
         ui->console->append("<font color=red>error:&nbsp;</font>" + err);
         return;
-    } update_code();
+    } 
+    update_code();
 }
 
 void MainWindow::clear() {
-    kill();
+    if (isRun) { kill(); }
     basic.clear();
     ui->run->clear();
     update_code();
 }
 
 void MainWindow::run() {
-    kill();
+    if (isRun) {
+        ui->console->append("<font color=red>warning:&nbsp;</font>The program is running.");
+        ui->console->append("<font color=lightgreen>minibasic>&nbsp;</font>");
+        return;
+    }
     ui->console->append("<font color=lightgreen>minibasic>&nbsp;</font>");
     ui->btnRun->setStyleSheet("QPushButton {border: 0px solid white; image:url(:/MainWindow/image/kill.png);}"
         "QPushButton:hover {border: 0px solid white; image:url(:/MainWindow/image/kill_hover.png);}"
@@ -117,10 +126,8 @@ void MainWindow::run() {
     QString state;
     isRun = true;
     try { basic.run(); }
-    catch (QString err) {
-        state = err;
-        basic.kill();
-    }
+    catch (QString err) { state = err; }
+    isRun = false;
     if (state.isEmpty()) {
         state = "<font color=lightgreen>process exited without error.</font>";
     } else { state = "<font color=red>process exited with 1 error:&nbsp;</font>" + state; };
@@ -132,6 +139,10 @@ void MainWindow::run() {
 }
 
 void MainWindow::kill() {
+    if (!isRun) {
+        ui->console->append("<font color=red>warning:&nbsp;</font>The program is not running.");
+        return;
+    }
     isRun = false;
     basic.kill();
     emit inputed("");
@@ -157,23 +168,21 @@ void MainWindow::on_cmd_returnPressed() {
     ui->console->moveCursor(QTextCursor::End);
     ui->console->insertHtml("<font color=white>" + str + "</font>");
     ui->cmd->clear();
-    qDebug() << str;
     str = str.trimmed();
     QString cmd = str.section(' ', 0, 0);
     str = str.section(' ', 1).trimmed();
     bool isNumber;
-    qsizetype line = cmd.toLongLong(&isNumber);
+    qsizetype line_seq = cmd.toLongLong(&isNumber);
     if (isNumber) {
         if (!str.isEmpty()) { 
-            set_code(line, str); 
-        } else { rm_code(line); }
+            set_code(line_seq, str); 
+        } else { rm_code(line_seq); }
     } else if (cmd == "clear" || cmd == "CLEAR") {
         clear();
     } else if (cmd == "run" || cmd == "RUN" || cmd == "r") {
         run(); return;
     } else if (cmd == "kill" || cmd == "KILL") {
-        basic.kill();
-        emit inputed(QString());
+        kill();
     } else if (cmd == "load" || cmd == "LOAD" || cmd == "l") {
         load(str);
     } else if (cmd == "save" || cmd == "SAVE" || cmd == "s") {

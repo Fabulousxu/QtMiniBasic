@@ -19,8 +19,8 @@ public:
 
     void update_code();
     void update_tree();
-    void set_code(qsizetype line, const QString &code);
-    void rm_code(qsizetype line);
+    void set_code(size_t line, const QString &code);
+    void rm_code(size_t line);
     void load(const QString &filename);
     void clear();
     void run();

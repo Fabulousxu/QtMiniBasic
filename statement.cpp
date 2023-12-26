@@ -1,42 +1,40 @@
 #include "statement.h"
 
-QStringList rem_stmt::to_strlist() const {
-    return QStringList{ "<font color=skyblue>REM</font>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;<font color=grey>" + comment + "</font>" };
+QStringList rem_stmt::to_HTML() const {
+    return { "<font color=skyblue>REM</font>", "&nbsp;&nbsp;&nbsp;&nbsp;<font color=grey>" + comment + "</font>" };
 }
 
-QStringList let_stmt::to_strlist() const {
-    QStringList exp_strlist = exp->to_strlist();
-    for (QString &line : exp_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+QStringList let_stmt::to_HTML() const {
+    QStringList exp_HTML = exp->to_HTML();
+    for (QString &line_seq : exp_HTML) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
     return QStringList{ "<font color=skyblue>LET</font>&nbsp;<font color=grey>=</font>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;<font color=yellow>" + var + "</font>" } + exp_strlist;
+        "&nbsp;&nbsp;&nbsp;&nbsp;<font color=yellow>" + var + "</font>" } + exp_HTML;
 }
 
-QStringList print_stmt::to_strlist() const {
-    QStringList exp_strlist = exp->to_strlist();
-    for (QString &line : exp_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-    return QStringList{ "<font color=skyblue>PRINT</font>" } + exp_strlist;
+QStringList print_stmt::to_HTML() const {
+    QStringList exp_HTML = exp->to_HTML();
+    for (QString &line_seq : exp_HTML) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+    return QStringList{ "<font color=skyblue>PRINT</font>" } + exp_HTML;
 }
 
-QStringList input_stmt::to_strlist() const {
-    return QStringList{ "<font color=skyblue>INPUT</font>",
-        "&nbsp;&nbsp;&nbsp;&nbsp;<font color=white>" + var + "</font>" };
+QStringList input_stmt::to_HTML() const {
+    return { "<font color=skyblue>INPUT</font>", "&nbsp;&nbsp;&nbsp;&nbsp;<font color=white>" + var + "</font>" };
 }
 
-QStringList goto_stmt::to_strlist() const {
-    return QStringList{ "<font color=skyblue>GOTO</font>",
+QStringList goto_stmt::to_HTML() const {
+    return { "<font color=skyblue>GOTO</font>",
         "&nbsp;&nbsp;&nbsp;&nbsp;<font color=green>" + QString::number(dest) + "</font>" };
 }
 
-QStringList if_stmt::to_strlist() const {
-    QStringList cond_strlist = cond->to_strlist();
-    for (QString &line : cond_strlist) { line.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-    return QStringList{ "<font color=skyblue>IF&nbsp;THEN</font>" } + cond_strlist +
+QStringList if_stmt::to_HTML() const {
+    QStringList cond_HTML = cond->to_HTML();
+    for (QString &line_seq : cond_HTML) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
+    return QStringList{ "<font color=skyblue>IF&nbsp;THEN</font>" } + cond_HTML +
         QStringList{ "&nbsp;&nbsp;&nbsp;&nbsp;<font color=green>" + QString::number(dest) + "</font>" };
 }
 
-QStringList end_stmt::to_strlist() const {
-    return QStringList{ "<font color=skyblue>END</font>" };
+QStringList end_stmt::to_HTML() const {
+    return { "<font color=skyblue>END</font>" };
 }
 
 stmt_node *gen_stmt(token_node *token) {
@@ -53,12 +51,12 @@ stmt_node *gen_stmt(token_node *token) {
                     throw QString("missing assignment operator after variable name.");
                 } exp_node *exp;
                 try { exp = gen_exp(token->next); }
-                catch (QString err) { throw err; }
+                catch (QString err_seq) { throw err_seq; }
                 return new let_stmt(var, exp); }
             case KW_PRINT: {
                 exp_node *exp;
                 try { exp = gen_exp(token->next); }
-                catch (QString err) { throw err; }
+                catch (QString err_seq) { throw err_seq; }
                 return new print_stmt(exp); }
             case KW_INPUT: {
                 token = token->next;
@@ -84,7 +82,7 @@ stmt_node *gen_stmt(token_node *token) {
                 token1->next = nullptr;
                 exp_node *cond;
                 try { cond = gen_exp(token->next); }
-                catch (QString err) { token1->next = token2; throw err; }
+                catch (QString err_seq) { token1->next = token2; throw err_seq; }
                 token1->next = token2;
                 return new if_stmt(cond, ((const_token *)token3)->val); }
             case KW_END:

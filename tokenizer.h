@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QtCore/qstring.h>
+#include <QtCore/qpair.h>
 
 enum token_t { TK_KEYWORD, TK_IDENTIFIER, TK_CONSTANT, TK_OPERATOR, TK_STRING };
 enum keyword_t { KW_REM, KW_LET, KW_PRINT, KW_INPUT, KW_GOTO, KW_IF, KW_THEN, KW_END };

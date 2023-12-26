@@ -1,232 +1,183 @@
 #include "minibasic.h"
 
-void MiniBasic::set_code(qsizetype line, const QString &code) {
-	auto [flag, pos] = find_line(line);
-	auto [err_flag, err_pos] = find_err_line(line);
-	QString err_str;
+void MiniBasic::set_code(size_t line, const QString &code) {
 	token_node *token = nullptr;
 	stmt_node *stmt = nullptr;
-	QStringList tree;
+	QString err_str;
 	std::function<void()> proc;
+	QStringList tree;
 
 	try { token = scan(code); }
-	catch (token_node *err) { 
-		token = err;
-		err_str = "illegal character.";
+	catch (QPair<token_node *, QString> err_msg) {
+		token = err_msg.first;
+		err_str = err_msg.second;
 	}
 	if (err_str.isEmpty()) {
 		try { stmt = gen_stmt(token); }
-		catch (QString err) { err_str = err; }
+		catch (QString err_msg) { err_str = err_msg; }
 	}
 	if (!err_str.isEmpty()) {
-		if (!err_flag) {
-			err_line.insert(err_pos, line);
-			err_seq.insert(err_pos, err_str);
-		} else { err_seq[err_pos] = err_str; }
+		err_seq[line] = err_str;
 		proc = [] { throw QString("exist syntax error."); };
 		tree = QStringList{ "<font color = red>error:</font>&nbsp;" + err_str };
 	} else {
-		if (err_flag) {
-			err_line.remove(err_pos);
-			err_seq.remove(err_pos);
-		} proc = gen_proc(stmt);
-		tree = stmt ? stmt->to_strlist() : QStringList{ "" };
+		err_seq.remove(line);
+		proc = gen_proc(stmt);
+		tree = stmt ? stmt->to_HTML() : QStringList{ "" };
 	}
-	if (flag) {
-		code_seq[pos] = to_HTML(token);
-		tree_seq[pos] = tree;
-		if (stmt_seq[pos]) { delete stmt_seq[pos]; }
-		stmt_seq[pos] = stmt;
-		proc_seq[pos] = proc;
-	} else {
-		line_seq.insert(pos, line);
-		code_seq.insert(pos, to_HTML(token));
-		tree_seq.insert(pos, tree);
-		stmt_seq.insert(pos, stmt);
-		proc_seq.insert(pos, proc);
-	}
+	auto iter = line_seq.find(line);
+	if (iter != line_seq.end()) { 
+		delete iter->stmt; 
+		iter.value() = { to_HTML(token), tree, stmt, proc };
+	} else { line_seq[line] = { to_HTML(token),tree,stmt,proc }; }
 	delete token;
 	if (!err_str.isEmpty()) { throw err_str; }
 }
 
-void MiniBasic::rm_code(qsizetype line) {
-	auto [flag, pos] = find_line(line);
-	auto [err_flag, err_pos] = find_err_line(line);
-	if (!flag) { throw QString("no such line."); }
-	line_seq.remove(pos);
-	code_seq.remove(pos);
-	tree_seq.remove(pos);
-	stmt_seq.remove(pos);
-	proc_seq.remove(pos);
-	if (err_flag) { err_seq.remove(err_pos); }
+void MiniBasic::rm_code(size_t line) {
+	auto iter = line_seq.find(line);
+	if (iter == line_seq.end()) { throw QString("no such line."); }
+	delete iter->stmt;
+	line_seq.erase(iter);
+	err_seq.remove(line);
 }
 
 void MiniBasic::load(const QString &filename) {
 	QFile *file = new QFile(filename);
 	if (!file->open(QIODevice::ReadOnly | QIODevice::Text)) { throw QString("no such file."); }
 	QString code;
-	qsizetype line;
+	qsizetype line_seq;
 	bool isNum;
 	QTextStream stream(file);
 	while (!(code = file->readLine()).isEmpty()) {
 		code = code.trimmed();
-		line = code.section(' ', 0, 0).toLongLong(&isNum);
+		line_seq = code.section(' ', 0, 0).toLongLong(&isNum);
 		if (!isNum) { continue; }
 		code = code.section(' ', 1);
-		try { set_code(line, code); }
-		catch (QString err) {}
+		try { set_code(line_seq, code); }
+		catch (QString err_seq) {}
 	} file->close();
 }
 
 void MiniBasic::run() {
-	if (!err_line.isEmpty()) { throw QString("exist syntax error, can't run."); }
-	for (curr_pos = 0, eval.clear(); curr_pos < proc_seq.size(); ++curr_pos) {
-		try { proc_seq[curr_pos](); }
+	if (!err_seq.isEmpty()) { throw QString("exist syntax error, can't run."); }
+	for (auto &line : line_seq) { if (line.stmt) { line.stmt->zero_out(); } }
+	kill();
+	isRun = true;
+	eval.clear();
+	curr_pos = line_seq.begin();
+	while (isRun && curr_pos != line_seq.end()) {
+		try { curr_pos->proc(); }
 		catch (QString err) {
-			throw "<font color=lightgreen>line " + QString::number(line_seq[curr_pos]) + ":</font>&nbsp;" + err;
+			isRun = false;
+			throw "<font color=lightgreen>line " + QString::number(curr_pos.key()) + ":</font>&nbsp;" + err;
 		}
 	}
-	curr_pos = 0;
 }
 
 void MiniBasic::kill()
 {
-	eval.clear(); 
-	curr_pos = proc_seq.size();
-	for (auto &stmt : stmt_seq) { if (stmt) { stmt->zero_out(); } }
+	isRun = false;
 }
 
 void MiniBasic::clear() {
+	for (auto &line : line_seq) { delete line.stmt; }
 	line_seq.clear();
-	code_seq.clear();
-	tree_seq.clear();
-	stmt_seq.clear();
-	proc_seq.clear();
-	err_line.clear();
 	err_seq.clear();
-	curr_pos = 0;
-	eval.clear();
+	curr_pos = line_seq.begin();
 }
 
 QStringList MiniBasic::code_HTML() {
 	QStringList codes;
-	if (code_seq.empty()) { return codes; }
-	qsizetype max_length = QString::number(line_seq.back()).length();
+	if (line_seq.empty()) { return codes; }
+	qsizetype max_length = QString::number(line_seq.lastKey()).length();
 	QString line;
-	for (int i = 0; i < line_seq.size(); ++i) {
-		line = QString::number(line_seq[i]);
-		codes.append("<font color=lightgreen>" + QString(max_length - line.length(), '0') +
-			line + "</font>&nbsp;" + code_seq[i]);
+	for (auto iter = line_seq.begin(); iter != line_seq.end(); ++iter) {
+		line = QString::number(iter.key());
+		line = "<font color=lightgreen>" + QString(max_length - line.length(), '0') + line + "</font>&nbsp;";
+		codes.append(line + iter->code);
 	}
 	return codes;
 }
 
 QStringList MiniBasic::tree_HTML() {
 	QStringList trees, tree;
-	if (tree_seq.empty()) { return trees; }
-	qsizetype max_length = QString::number(line_seq.back()).length();
+	if (line_seq.empty()) { return trees; }
+	qsizetype max_length = QString::number(line_seq.lastKey()).length();
 	QString line;
-	for (int i = 0; i < line_seq.size(); ++i) {
-		line = QString::number(line_seq[i]);
+	for (auto iter = line_seq.begin(); iter != line_seq.end(); ++iter) {
+		line = QString::number(iter.key());
 		line = "<font color=lightgreen>" + QString(max_length - line.length(), '0') + line + "</font>&nbsp;";
-		tree = tree_seq[i];
+		tree = iter->tree;
 		tree[0].push_front(line);
-		if (stmt_seq[i]) {
-			switch (stmt_seq[i]->type) {
+		if (iter->stmt) {
+			switch (iter->stmt->type) {
 				case STMT_REM: break;
 				case STMT_LET:
 					tree[0].push_back("&nbsp;<font color=deeppink>" +
-						QString::number(((let_stmt *)stmt_seq[i])->count) + "</font>");
+						QString::number(((let_stmt *)iter->stmt)->count) + "</font>");
 					tree[1].push_back("&nbsp;<font color=purple>" +
-						QString::number(eval.get_num(((let_stmt *)stmt_seq[i])->var)) + "</font>");
+						QString::number(eval.get_num(((let_stmt *)iter->stmt)->var)) + "</font>");
 					break;
 				case STMT_PRINT: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((print_stmt *)stmt_seq[i])->count) + "</font>"); break;
+					QString::number(((print_stmt *)iter->stmt)->count) + "</font>"); break;
 				case STMT_INPUT:
 					tree[0].push_back("&nbsp;<font color=deeppink>" +
-						QString::number(((input_stmt *)stmt_seq[i])->count) + "</font>");
+						QString::number(((input_stmt *)iter->stmt)->count) + "</font>");
 					tree[1].push_back("&nbsp;<font color=deeppink>" +
-						QString::number(eval.get_num(((input_stmt *)stmt_seq[i])->var)) + "</font>");
+						QString::number(eval.get_num(((input_stmt *)iter->stmt)->var)) + "</font>");
 					break;
 				case STMT_GOTO: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((goto_stmt *)stmt_seq[i])->count) + "</font>"); break;
+					QString::number(((goto_stmt *)iter->stmt)->count) + "</font>"); break;
 				case STMT_END: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((end_stmt *)stmt_seq[i])->count) + "</font>"); break;
+					QString::number(((end_stmt *)iter->stmt)->count) + "</font>"); break;
 				case STMT_IF: tree[0].push_back("&nbsp;<font color=deeppink>" +
-					QString::number(((if_stmt *)stmt_seq[i])->if_count) + "&nbsp;" +
-					QString::number(((if_stmt *)stmt_seq[i])->then_count) + "</font>");
+					QString::number(((if_stmt *)iter->stmt)->if_count) + "&nbsp;" +
+					QString::number(((if_stmt *)iter->stmt)->then_count) + "</font>");
 			}
-		} trees.append(tree);
+		}
+		trees.append(tree);
 	}
 	return trees;
 }
 
-QPair<bool, qsizetype> MiniBasic::find_line(qsizetype line) const {
-	qsizetype low = 0, high = line_seq.size(), mid;
-	if (high == 0 || line > line_seq[high - 1]) { return { false, high }; }
-	if (line == line_seq[high - 1]) { return { true, high - 1 }; }
-	--high;
-	while (low < high) {
-		mid = (low + high) / 2;
-		if (line < line_seq[mid]) {
-			high = mid;
-		} else if (line > line_seq[mid]) {
-			low = mid + 1;
-		} else { return { true, mid }; }
-	} return { false, low };
-}
-
-QPair<bool, qsizetype> MiniBasic::find_err_line(qsizetype line) const {
-	qsizetype low = 0, high = err_line.size(), mid;
-	if (high == 0 || line > err_line[high - 1]) { return { false, high }; }
-	if (line == err_line[high - 1]) { return { true, high - 1 }; }
-	--high;
-	while (low < high) {
-		mid = (low + high) / 2;
-		if (line < err_line[mid]) {
-			high = mid;
-		} else if (line > err_line[mid]) {
-			low = mid + 1;
-		} else { return { true, mid }; }
-	} return { false, low };
-}
-
 std::function<void()> MiniBasic::gen_proc(stmt_node *stmt) {
-	if (!stmt) { return [] {}; }
+	if (!stmt) { return [this] { ++curr_pos; }; }
 	switch (stmt->type) {
-		case STMT_REM: return [] {};
+		case STMT_REM: return [this] { ++curr_pos; };
 		case STMT_LET: return [this, stmt] {
 			++((let_stmt *)stmt)->count;
 			qint64 val;
 			try { val = eval.get_val(((let_stmt *)stmt)->exp); }
-			catch (QString err) { throw err; }
-			eval.set_val(((let_stmt *)stmt)->var, val); };
+			catch (QString err_seq) { throw err_seq; }
+			eval.set_val(((let_stmt *)stmt)->var, val);
+			++curr_pos; };
 		case STMT_PRINT: return [this, stmt] {
 			++((print_stmt *)stmt)->count;
 			qint64 val;
 			try { val = eval.get_val(((print_stmt *)stmt)->exp); }
-			catch (QString err) { throw err; }
-			print(val); };
+			catch (QString err_seq) { throw err_seq; }
+			print(val);
+			++curr_pos; };
 		case STMT_INPUT: return [this, stmt] {
 			++((input_stmt *)stmt)->count;
-			eval.set_val(((input_stmt *)stmt)->var, input()); };
+			eval.set_val(((input_stmt *)stmt)->var, input());
+			++curr_pos; };
 		case STMT_GOTO: return [this, stmt] {
 			++((goto_stmt *)stmt)->count;
-			auto [flag, pos] = find_line(((goto_stmt *)stmt)->dest);
-			if (!flag) { throw QString("goto invalid line."); }
-			curr_pos = pos - 1; };
+			curr_pos = line_seq.find(((goto_stmt *)stmt)->dest);
+			if (curr_pos == line_seq.end()) { throw QString("goto invalid line."); } };
 		case STMT_IF: return [this, stmt] {
 			++((if_stmt *)stmt)->if_count;
 			qint64 cond;
 			try { cond = eval.get_val(((if_stmt *)stmt)->cond); }
-			catch (QString err) { throw err; }
-			if (!cond) { return; }
+			catch (QString err_seq) { throw err_seq; }
+			if (!cond) { ++curr_pos; return; }
 			++((if_stmt *)stmt)->then_count;
-			auto [flag, pos] = find_line(((if_stmt *)stmt)->dest);
-			if (!flag) { throw QString("goto invalid line."); }
-			curr_pos = pos - 1; };
+			curr_pos = line_seq.find(((if_stmt *)stmt)->dest);
+			if (curr_pos == line_seq.end()) { throw QString("goto invalid line."); } };
 		case STMT_END: return [this, stmt] {
 			++((end_stmt *)stmt)->count;
-			curr_pos = proc_seq.size() - 1; };
+			curr_pos = line_seq.end(); };
 	}
 }
