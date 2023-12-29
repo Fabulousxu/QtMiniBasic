@@ -1,50 +1,52 @@
 #pragma once
 
-#include "tokenizer.h"
-#include <QtCore/qstack.h>
+#include "token.h"
+#include "preference.h"
 #include <QtCore/qstringlist.h>
 
-enum exp_t { EXP_VARIABLE, EXP_NUMBER, EXP_OPERATOR };
-
-struct exp_node {
-	exp_t type;
-	exp_node(exp_t type) : type(type) {}
-	virtual ~exp_node() {}
-	virtual QStringList to_HTML() const = 0;
+enum ExpressionType {
+	EXPRESSION_VARIABLE,
+	EXPRESSION_NUMBER,
+	EXPRESSION_OPERATOR
 };
 
-struct var_exp : exp_node {
-	QString val;
-	var_exp(const QString &val) : exp_node(EXP_VARIABLE), val(val) {}
-	QStringList to_HTML() const;
+struct Expression {
+	ExpressionType type;
+	Expression(ExpressionType type) : type(type) {}
+	virtual ~Expression() {}
+	virtual QStringList toHTML() const = 0;
 };
 
-struct num_exp : exp_node {
-	qint64 val;
-	num_exp(qint64 val) : exp_node(EXP_NUMBER), val(val) {}
-	QStringList to_HTML() const;
+struct VariableExpression : Expression {
+	QString value;
+	VariableExpression(const QString &value) : Expression(EXPRESSION_VARIABLE), value(value) {}
+	QStringList toHTML() const;
 };
 
-struct op_exp : exp_node {
-	op_t val;
-	op_exp(op_t val) : exp_node(EXP_OPERATOR), val(val) {}
-	virtual ~op_exp() {}
-	virtual QStringList to_HTML() const = 0;
+struct NumberExpression : Expression {
+	qint64 value;
+	NumberExpression(qint64 value) : Expression(EXPRESSION_NUMBER), value(value) {}
+	QStringList toHTML() const;
 };
 
-struct unary_exp : op_exp {
-	exp_node *child;
-	unary_exp(op_t val, exp_node *child) : op_exp(val), child(child) {}
-	~unary_exp() { delete child; }
-	QStringList to_HTML() const;
+struct OperatorExpression : Expression {
+	OperatorType value;
+	OperatorExpression(OperatorType value) : Expression(EXPRESSION_OPERATOR), value(value) {}
+	//virtual ~OperatorExpression() {}
 };
 
-struct bin_exp : op_exp {
-	exp_node *left;
-	exp_node *right;
-	bin_exp(op_t val, exp_node *l, exp_node *r) :op_exp(val), left(l), right(r) {}
-	~bin_exp() { delete left, right; }
-	QStringList to_HTML() const;
+struct UnaryOperatorExpression : OperatorExpression {
+	Expression *child;
+	UnaryOperatorExpression(OperatorType value, Expression *child) : OperatorExpression(value), child(child) {}
+	~UnaryOperatorExpression();
+	QStringList toHTML() const;
 };
 
-exp_node *gen_exp(token_node *token);
+struct BinaryOperatorExpression : OperatorExpression {
+	Expression *left;
+	Expression *right;
+	BinaryOperatorExpression(OperatorType value, Expression *left, Expression *right)
+		: OperatorExpression(value), left(left), right(right) {}
+	~BinaryOperatorExpression();
+	QStringList toHTML() const;
+};

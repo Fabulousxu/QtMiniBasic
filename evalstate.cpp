@@ -1,82 +1,89 @@
 #include "evalstate.h"
 
-qint64 eval_state::get_val(exp_node *exp) {
-	if (exp->type == EXP_NUMBER) { return ((num_exp *)exp)->val; }
-	if (exp->type == EXP_VARIABLE) {
-		if (var_map.contains(((var_exp *)exp)->val)) {
-			++var_map[((var_exp *)exp)->val].second;
-			return var_map[((var_exp *)exp)->val].first;
-		} else { throw "variable \"" + ((var_exp *)exp)->val + "\" is being used without initialized."; }
+qint64 EvaluationState::getValue(Expression *expression) {
+	if (expression->type == EXPRESSION_NUMBER) { return ((NumberExpression *)expression)->value; }
+	if (expression->type == EXPRESSION_VARIABLE) {
+		if (variableMap.contains(((VariableExpression *)expression)->value)) {
+			++variableMap[((VariableExpression *)expression)->value].second;
+			return variableMap[((VariableExpression *)expression)->value].first;
+		} else {
+			throw RuntimeError(
+				"variable \"" + ((VariableExpression *)expression)->value + "\" is being used without initialized."
+			);
+		}
 	}
 
-#define UNARY_OP(op) { \
-	qint64 val; \
-	try { val = get_val(((unary_exp *)exp)->child); } \
-	catch (QString err_seq) { throw err_seq; } \
-	return op val; }
+#define GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION(op) { \
+	qint64 value; \
+	try { value = getValue(((UnaryOperatorExpression *)expression)->child); } \
+	catch (RuntimeError error) { throw error; } \
+	return op value; \
+	}
 
-#define BIN_OP(op) { \
+#define GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(op) { \
 	qint64 val1, val2; \
-	try { val1 = get_val(((bin_exp *)exp)->left); } \
-	catch (QString err_seq) { throw err_seq; } \
-	try { val2 = get_val(((bin_exp *)exp)->right); } \
-	catch (QString err_seq) { throw err_seq; } \
-	return val1 op val2; }
+	try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); } \
+	catch (RuntimeError error) { throw error; } \
+	try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); } \
+	catch (RuntimeError error) { throw error; } \
+	return val1 op val2; \
+	}
 
-#define NOT_ZERO_OP(op) { \
+#define GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(op) { \
 	qint64 val1, val2; \
-	try { val1 = get_val(((bin_exp *)exp)->left); } \
-	catch (QString err_seq) { throw err_seq; } \
-	try { val2 = get_val(((bin_exp *)exp)->right); } \
-	catch (QString err_seq) { throw err_seq; } \
-	if (!val2) { throw QString("divide or mod zero."); } \
-	return val1 op val2; }
+	try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); } \
+	catch (RuntimeError error) { throw error; } \
+	try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); } \
+	catch (RuntimeError error) { throw error; } \
+	if (!val2) { throw RuntimeError("divide or mod zero."); } \
+	return val1 op val2; \
+	}
 
-	switch (((op_exp *)exp)->val) {
-		case POW: {
+	switch (((OperatorExpression *)expression)->value) {
+		case POWER: {
 			qint64 val1, val2;
-			try { val1 = get_val(((bin_exp *)exp)->left); }
-			catch (QString err_seq) { throw err_seq; }
-			try { val2 = get_val(((bin_exp *)exp)->right); }
-			catch (QString err_seq) { throw err_seq; }
-			if (!val1 && !val2) { throw QString("0 power 0."); }
+			try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); }
+			catch (RuntimeError error) { throw error; }
+			try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); }
+			catch (RuntimeError error) { throw error; }
+			if (!val1 && !val2) { throw RuntimeError("0 power 0."); }
 			return pow(val1, val2); }
-		case POS: UNARY_OP(+)
-		case NEG: UNARY_OP(-)
-		case MUL: BIN_OP(*)
-		case DIV: NOT_ZERO_OP(/ )
-		case MOD: NOT_ZERO_OP(%)
-		case ADD: BIN_OP(+)
-		case SUB: BIN_OP(-)
-		case LT: BIN_OP(< )
-		case LE: BIN_OP(<= )
-		case GE: BIN_OP(>= )
-		case GT: BIN_OP(> )
-		case EQ: BIN_OP(== )
-		case NE: BIN_OP(!= )
+		case POSITIVE: GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION(+)
+		case NEGATIVE: GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION(-)
+		case TIMES: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(*)
+		case OVER: GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(/ )
+		case MOD: GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(%)
+		case PLUS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(+)
+		case MINUS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(-)
+		case LESS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(< )
+		case LESS_EQUAL: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(<= )
+		case GREATER_EQUAL: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(>= )
+		case GREATER: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(> )
+		case EQUAL: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(== )
+		case NOT_EQUAL: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(!= )
 	}
-#undef UNARY_OP
-#undef BIN_OP
-#undef NOT_ZERO_OP
+#undef GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION
+#undef GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION
+#undef GET_VALUE_OF_OVER_OR_MOD_EXPRESSION
 }
 
-qint64 eval_state::get_val(QString var) {
-	if (var_map.contains(var)) {
-		return var_map[var].first;
-	} else { throw "variable \"" + var + "\" hasn't been defined."; }
+qint64 EvaluationState::getValue(const QString &variable) {
+	if (variableMap.contains(variable)) {
+		return variableMap[variable].first;
+	} else { throw QString("variable \"" + variable + "\" hasn't been defined."); }
 }
 
-qsizetype eval_state::get_num(QString var)
+size_t EvaluationState::getCount(const QString &variable)
 {
-	if (var_map.contains(var)) {
-		return var_map[var].second;
+	if (variableMap.contains(variable)) {
+		return variableMap[variable].second;
 	} else return 0;
 }
 
-void eval_state::set_val(QString name, qint64 val)
+void EvaluationState::setValue(const QString &variable, qint64 value)
 {
-	if (var_map.contains(name)) {
-		++var_map[name].second;
-	} else { var_map[name].second = 0; }
-	var_map[name].first = val;
+	if (variableMap.contains(variable)) {
+		++variableMap[variable].second;
+	} else { variableMap[variable].second = 0; }
+	variableMap[variable].first = value;
 }

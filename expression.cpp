@@ -1,66 +1,68 @@
 #include "expression.h"
 
-QStringList var_exp::to_HTML() const {
-	return QStringList{ "<font color=white>" + val + "</font>" };
+QStringList VariableExpression::toHTML() const {
+	return { makeFont(treeColor[TREE_VARIABLE_EXPRESSION], value) };
 }
 
-QStringList num_exp::to_HTML() const {
-	return QStringList{ "<font color=darkorange>" + QString::number(val) + "</font>" };
+QStringList NumberExpression::toHTML() const {
+	return { makeFont(treeColor[TREE_NUMBER], QString::number(value)) };
 }
 
-QStringList unary_exp::to_HTML() const {
-	QStringList child_strlist = child->to_HTML();
-	for (QString &line_seq : child_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-	return QStringList{ "<font color=gold>" + op_str[val] + "</font>" } + child_strlist;
-}
-
-QStringList bin_exp::to_HTML() const {
-	QStringList left_strlist = left->to_HTML();
-	QStringList right_strlist = right->to_HTML();
-	for (QString &line_seq : left_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-	for (QString &line_seq : right_strlist) { line_seq.push_front("&nbsp;&nbsp;&nbsp;&nbsp;"); }
-	return QStringList{ "<font color=gold>" + op_str[val] + "</font>" } + left_strlist + right_strlist;
-}
-
-exp_node *gen_exp(token_node *token) {
-	QStack<op_t> op_stack;
-	QStack<exp_node *> exp_stack;
-#define GEN_EXP(op) \
-	while (!op_stack.empty() && op_stack.top() < op) { \
-		if (op_stack.top() == POS || op_stack.top() == NEG) { \
-			if (exp_stack.empty()) { \
-				throw "missing operand of operator \"" + op_str[op_stack.top()] + "\"."; \
-			} else { exp_stack.push(new unary_exp(op_stack.pop(), exp_stack.pop())); } \
-		} else { \
-			if (exp_stack.size() < 2) { \
-				throw "missing operand of operator \"" + op_str[op_stack.top()] + "\"."; \
-			} exp_node *right = exp_stack.pop(); \
-			exp_stack.push(new bin_exp(op_stack.pop(), exp_stack.pop(), right)); \
-		} \
+UnaryOperatorExpression::~UnaryOperatorExpression() {
+	if (child && child->type == EXPRESSION_OPERATOR) {
+		if (((OperatorExpression *)child)->value == POSITIVE ||
+			((OperatorExpression *)child)->value == NEGATIVE) {
+			delete ((UnaryOperatorExpression *)child)->child;
+			((UnaryOperatorExpression *)child)->child = nullptr;
+		} else {
+			delete ((BinaryOperatorExpression *)child)->left;
+			((BinaryOperatorExpression *)child)->left = nullptr;
+			delete ((BinaryOperatorExpression *)child)->right;
+			((BinaryOperatorExpression *)child)->right = nullptr;
+		}
 	}
+	delete child;
+}
 
-	for (; token; token = token->next) {
-		if (token->type == TK_IDENTIFIER) {
-			exp_stack.push(new var_exp(((id_token *)token)->val));
-		} else if (token->type == TK_CONSTANT) {
-			exp_stack.push(new num_exp(((const_token *)token)->val));
-		} else if (token->type == TK_OPERATOR) {
-			switch (((op_token *)token)->val) {
-				case MUL: case DIV: case MOD: GEN_EXP(ADD); break;
-				case ADD: case SUB: GEN_EXP(LT); break;
-				case LT: case LE: case GE: case GT: GEN_EXP(EQ); break;
-				case EQ: case NE: GEN_EXP(LPAREN); break;
-			}
-			if (((op_token *)token)->val == RPAREN) {
-				GEN_EXP(LPAREN);
-				if (op_stack.empty()) { throw QString("missing left paren."); }
-				op_stack.pop();
-			} else { op_stack.push(((op_token *)token)->val); }
-		} else { throw QString("excess statement after expression."); }
-	} GEN_EXP(LPAREN);
-	if (!op_stack.empty()) { throw QString("missing right paren."); }
-	if (exp_stack.empty()) { throw QString("empty expression."); }
-	if (exp_stack.size() > 1) { throw QString("illegal expression."); }
-	return exp_stack.top();
-#undef GEN_EXP
+QStringList UnaryOperatorExpression::toHTML() const {
+	QStringList childHTML = child->toHTML();
+	for (QString &line : childHTML) { line.push_front(identation); }
+	return QStringList{ makeFont(treeColor[TREE_OPERATOR],operatorString[value]) } + childHTML;
+}
+
+BinaryOperatorExpression::~BinaryOperatorExpression() {
+	if (left && left->type == EXPRESSION_OPERATOR) {
+		if (((OperatorExpression *)left)->value == POSITIVE ||
+			((OperatorExpression *)left)->value == NEGATIVE) {
+			delete ((UnaryOperatorExpression *)left)->child;
+			((UnaryOperatorExpression *)left)->child = nullptr;
+		} else {
+			delete ((BinaryOperatorExpression *)left)->left;
+			((BinaryOperatorExpression *)left)->left = nullptr;
+			delete ((BinaryOperatorExpression *)left)->right;
+			((BinaryOperatorExpression *)left)->right = nullptr;
+		}
+	}
+	delete left;
+	if (right && right->type == EXPRESSION_OPERATOR) {
+		if (((OperatorExpression *)right)->value == POSITIVE ||
+			((OperatorExpression *)right)->value == NEGATIVE) {
+			delete ((UnaryOperatorExpression *)right)->child;
+			((UnaryOperatorExpression *)right)->child = nullptr;
+		} else {
+			delete ((BinaryOperatorExpression *)right)->left;
+			((BinaryOperatorExpression *)right)->left = nullptr;
+			delete ((BinaryOperatorExpression *)right)->right;
+			((BinaryOperatorExpression *)right)->right = nullptr;
+		}
+	}
+	delete right;
+}
+
+QStringList BinaryOperatorExpression::toHTML() const {
+	QStringList leftHTML = left->toHTML();
+	QStringList rightHTML = right->toHTML();
+	for (QString &line : leftHTML) { line.push_front(identation); }
+	for (QString &line : rightHTML) { line.push_front(identation); }
+	return QStringList{ makeFont(treeColor[TREE_OPERATOR], operatorString[value]) } + leftHTML + rightHTML;
 }

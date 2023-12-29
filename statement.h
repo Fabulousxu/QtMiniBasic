@@ -2,74 +2,82 @@
 
 #include "expression.h"
 
-enum stmt_t { STMT_REM, STMT_LET, STMT_PRINT, STMT_INPUT, STMT_GOTO, STMT_IF, STMT_END };
-
-struct stmt_node {
-	stmt_t type;
-	stmt_node(stmt_t type) : type(type) {}
-	virtual ~stmt_node() {}
-	virtual QStringList to_HTML() const = 0;
-	virtual void zero_out() = 0;
+enum StatementType {
+	STATEMENT_REM,
+	STATEMENT_LET,
+	STATEMENT_PRINT,
+	STATEMENT_INPUT,
+	STATEMENT_GOTO,
+	STATEMENT_IF,
+	STATEMENT_END
 };
 
-struct rem_stmt : stmt_node {
+struct Statement {
+	StatementType type;
+	Statement(StatementType type) : type(type) {}
+	virtual ~Statement() {}
+	virtual QStringList toHTML() const = 0;
+	virtual void zeroOut() = 0;
+};
+
+struct RemStatement : Statement {
 	QString comment;
-	rem_stmt(const QString &comment) : stmt_node(STMT_REM), comment(comment) {}
-	QStringList to_HTML() const;
-	void zero_out() {}
+	RemStatement(const QString &comment) : Statement(STATEMENT_REM), comment(comment) {}
+	QStringList toHTML() const;
+	void zeroOut() {}
 };
 
-struct let_stmt : stmt_node {
-	QString var;
-	exp_node *exp;
-	qsizetype count;
-	let_stmt(const QString &var, exp_node *exp) : stmt_node(STMT_LET), var(var), exp(exp), count(0) {}
-	~let_stmt() { delete exp; }
-	QStringList to_HTML() const;
-	void zero_out() { count = 0; }
+struct LetStatement : Statement {
+	QString variable;
+	Expression *expression;
+	size_t count;
+	LetStatement(const QString &variable, Expression *expression) 
+		: Statement(STATEMENT_LET), variable(variable), expression(expression), count(0) {}
+	~LetStatement() { delete expression; }
+	QStringList toHTML() const;
+	void zeroOut() { count = 0; }
 };
 
-struct print_stmt : stmt_node {
-	exp_node *exp;
-	qsizetype count;
-	print_stmt(exp_node *exp) : stmt_node(STMT_PRINT), exp(exp), count(0) {}
-	~print_stmt() { delete exp; }
-	QStringList to_HTML() const;
-	void zero_out() { count = 0; }
+struct PrintStatement : Statement {
+	Expression *expression;
+	size_t count;
+	PrintStatement(Expression *expression) : Statement(STATEMENT_PRINT), expression(expression), count(0) {}
+	~PrintStatement() { delete expression; }
+	QStringList toHTML() const;
+	void zeroOut() { count = 0; }
 };
 
-struct input_stmt : stmt_node {
-	QString var;
-	qsizetype count;
-	input_stmt(const QString &var) : stmt_node(STMT_INPUT), var(var), count(0) {}
-	QStringList to_HTML() const;
-	void zero_out() { count = 0; }
+struct InputStatement : Statement {
+	QString variable;
+	size_t count;
+	InputStatement(const QString &variable) : Statement(STATEMENT_INPUT), variable(variable), count(0) {}
+	QStringList toHTML() const;
+	void zeroOut() { count = 0; }
 };
 
-struct goto_stmt : stmt_node {
-	qsizetype dest;
-	qsizetype count;
-	goto_stmt(qsizetype dest) : stmt_node(STMT_GOTO), dest(dest), count(0) {}
-	QStringList to_HTML() const;
-	void zero_out() { count = 0; }
+struct GotoStatement : Statement {
+	size_t destination;
+	size_t count;
+	GotoStatement(size_t destination) : Statement(STATEMENT_GOTO), destination(destination), count(0) {}
+	QStringList toHTML() const;
+	void zeroOut() { count = 0; }
 };
 
-struct if_stmt : stmt_node {
-	exp_node *cond;
-	qsizetype dest;
-	qsizetype if_count;
-	qsizetype then_count;
-	if_stmt(exp_node *cond, qsizetype dest) : stmt_node(STMT_IF), cond(cond), dest(dest), if_count(0), then_count(0) {}
-	~if_stmt() { delete cond; }
-	QStringList to_HTML() const;
-	void zero_out() { if_count = then_count = 0; }
+struct IfStatement : Statement {
+	Expression *condition;
+	size_t destination;
+	size_t ifCount;
+	size_t thenCount;
+	IfStatement(Expression *condition, size_t destination) 
+		: Statement(STATEMENT_IF), condition(condition), destination(destination), ifCount(0), thenCount(0) {}
+	~IfStatement() { delete condition; }
+	QStringList toHTML() const;
+	void zeroOut() { ifCount = thenCount = 0; }
 };
 
-struct end_stmt : stmt_node {
-	qsizetype count;
-	end_stmt() : stmt_node(STMT_END), count(0) {}
-	QStringList to_HTML() const;
-	void zero_out() { count = 0; }
+struct EndStatement : Statement {
+	size_t count;
+	EndStatement() : Statement(STATEMENT_END), count(0) {}
+	QStringList toHTML() const;
+	void zeroOut() { count = 0; }
 };
-
-stmt_node *gen_stmt(token_node *token);

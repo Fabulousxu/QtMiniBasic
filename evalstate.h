@@ -1,18 +1,18 @@
 #pragma once
 
 #include "expression.h"
+#include "exception.h"
 #include <qmap.h>
 #include <qpair.h>
-#include <qdebug.h>
 
-class eval_state {
+class EvaluationState {
 public:
-	qint64 get_val(exp_node *exp);
-	qint64 get_val(QString var);
-	qsizetype get_num(QString var);
-	void set_val(QString name, qint64 val);
-	void clear() { var_map.clear(); }
+	qint64 getValue(Expression *expression);
+	qint64 getValue(const QString &variable);
+	size_t getCount(const QString &variable);
+	void setValue(const QString &name, qint64 value);
+	void clear() { variableMap.clear(); }
 
 private:
-	QMap<QString, QPair<qint64, qsizetype>> var_map;
+	QMap<QString, QPair<qint64, size_t>> variableMap;
 };
