@@ -12,5 +12,8 @@
         <file>image/run.png</file>
         <file>image/run_hover.png</file>
         <file>image/run_pressed.png</file>
+        <file>image/save.png</file>
+        <file>image/save_hover.png</file>
+        <file>image/save_pressed.png</file>
     </qresource>
 </RCC>

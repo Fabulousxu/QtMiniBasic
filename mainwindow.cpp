@@ -20,7 +20,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->cmd->setFocus();
     ui->console->append("Qt MiniBasic Interpreter");
-    ui->console->append("Developer: XU Peigong email:xupeigong@sjtu.edu.cn github:Fabulousxu");
+    ui->console->append("Developer: XU Peigong email:xupeigong@sjtu.edu.cn");
     ui->console->append("Shanghai Jiao Tong University. 2023/12/08");
     ui->console->append("******************************");
     ui->console->append("Type \"help\" to get help about how to use it.");
@@ -49,8 +49,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnClear, &QPushButton::clicked, this, [this] {
         ui->console->moveCursor(QTextCursor::End);
         ui->console->insertHtml(makeFont("white", "clear"));
-        ui->console->append(makeFont("lightgreen", "minibasic>&nbsp;"));
         clear();
+        ui->console->append(makeFont("lightgreen", "minibasic>&nbsp;"));
+        });
+
+    connect(ui->btnSave, &QPushButton::clicked, this, [this] {
+        QString filename = QFileDialog::getSaveFileName();
+        ui->console->moveCursor(QTextCursor::End);
+        ui->console->insertHtml(makeFont("white", "save&nbsp;" + filename));
+        saveCode(filename);
+        ui->console->append(makeFont("lightgreen", "minibasic>&nbsp;"));
         });
 
     connect(ui->cmd, &QLineEdit::returnPressed, this, &MainWindow::on_cmd_returnPressed);
@@ -104,6 +112,16 @@ void MainWindow::loadCode(const QString &filename) {
     update_code();
 }
 
+void MainWindow::saveCode(const QString &filename) {
+    QFile *file = new QFile(filename);
+    if (!file->open(QIODevice::WriteOnly | QIODevice::Text)) {
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + "no such file.");
+    }
+    QTextStream stream(file);
+    stream << ui->code->toPlainText();
+    file->close();
+}
+
 void MainWindow::clear() {
     if (basic.isRunning()) { kill(); }
     basic.clearCode();
@@ -154,7 +172,7 @@ void MainWindow::help() {
     ui->console->append("r/run/RUN  ---run the basic program");
     ui->console->append("c/clear/CLEAR  ---clear the codes");
     ui->console->append("l/load/LOAD [file path]  ---load a basic code file");
-    //ui->console->append("s/save/SAVE [file path]  ---save a basic code file");
+    ui->console->append("s/save/SAVE [file path]  ---save a basic code file");
     ui->console->append("h/help/HELP  ---get help");
     ui->console->append("q/quit/QUIT  ---quit this program");
 }
@@ -182,7 +200,7 @@ void MainWindow::on_cmd_returnPressed() {
     } else if (cmd == "load" || cmd == "LOAD" || cmd == "l") {
         loadCode(str);
     } else if (cmd == "save" || cmd == "SAVE" || cmd == "s") {
-
+        saveCode(str);
     } else if (cmd == "help" || cmd == "HELP" || cmd == "h") {
         help();
     } else if (cmd == "quit" || cmd == "QUIT" || cmd == "q") {

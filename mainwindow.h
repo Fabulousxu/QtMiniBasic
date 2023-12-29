@@ -22,6 +22,7 @@ public:
     void setCode(qsizetype line, const QString &code);
     void removeCode(size_t line);
     void loadCode(const QString &filename);
+    void saveCode(const QString &filename);
     void clear();
     void run();
     void kill();

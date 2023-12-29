@@ -32,7 +32,6 @@ struct NumberExpression : Expression {
 struct OperatorExpression : Expression {
 	OperatorType value;
 	OperatorExpression(OperatorType value) : Expression(EXPRESSION_OPERATOR), value(value) {}
-	//virtual ~OperatorExpression() {}
 };
 
 struct UnaryOperatorExpression : OperatorExpression {

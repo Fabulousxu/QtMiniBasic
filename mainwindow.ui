@@ -77,6 +77,12 @@
          <height>45</height>
         </rect>
        </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
 border: 0px solid white;
@@ -104,6 +110,12 @@ image: url(:/MainWindow/image/load_pressed.png);
          <width>45</width>
          <height>45</height>
         </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
        </property>
        <property name="styleSheet">
         <string notr="true">QPushButton {
@@ -151,6 +163,43 @@ image: url(:/MainWindow/image/clear_hover.png);
 QPushButton:pressed {
 border: 0px solid white;
 image: url(:/MainWindow/image/clear_pressed.png);
+}
+</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="btnSave">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>230</y>
+         <width>45</width>
+         <height>45</height>
+        </rect>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="mouseTracking">
+        <bool>true</bool>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QPushButton {
+border: 0px solid white;
+image: url(:/MainWindow/image/save.png);
+}
+QPushButton:hover {
+border: 0px solid white;
+image: url(:/MainWindow/image/save_hover.png);
+}
+QPushButton:pressed {
+border: 0px solid white;
+image: url(:/MainWindow/image/save_pressed.png);
 }
 </string>
        </property>
