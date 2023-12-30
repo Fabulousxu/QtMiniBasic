@@ -177,19 +177,91 @@ void MainWindow::help() {
     ui->console->append("q/quit/QUIT  ---quit this program");
 }
 
+void MainWindow::immediatelyPrint(const QString &code) {
+    QList<Token *> tokenList;
+    Expression *expression = nullptr;
+    qint64 value;
+
+    try { value = EvaluationState().getValue(expression = parserExpression(tokenList = scan(code))); }
+    catch (QPair<QList<Token *>, ScanError> scanError) {
+        clearTokenList(scanError.first);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + scanError.second.what());
+        return;
+    }
+    catch (ParserError parserError) {
+        clearTokenList(tokenList);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + parserError.what());
+        return;
+    }
+    catch (RuntimeError runtimeError) {
+        clearTokenList(tokenList);
+        delete expression;
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + runtimeError.what());
+        return;
+    }
+    ui->console->append(QString::number(value));
+    clearTokenList(tokenList);
+    delete expression;
+}
+
+void MainWindow::immediatelyLet(const QString &code) {
+    QList<Token *> tokenList;
+    Statement *statement = nullptr;
+
+    try { EvaluationState().getValue(((LetStatement *)(statement = parser(tokenList = scan(code))))->expression); }
+    catch (QPair<QList<Token *>, ScanError> scanError) {
+        clearTokenList(scanError.first);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + scanError.second.what());
+        return;
+    }
+    catch (ParserError parserError) {
+        clearTokenList(tokenList);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + parserError.what());
+        return;
+    }
+    catch (RuntimeError runtimeError) {
+        clearTokenList(tokenList);
+        delete statement;
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + runtimeError.what());
+        return;
+    }
+    clearTokenList(tokenList);
+    delete statement;
+}
+
+void MainWindow::immediatelyInput(const QString &code) {
+    QList<Token *> tokenList;
+    Statement *statement = nullptr;
+
+    try { statement = parser(tokenList = scan(code)); }
+    catch (QPair<QList<Token *>, ScanError> scanError) {
+        clearTokenList(scanError.first);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + scanError.second.what());
+        return;
+    }
+    catch (ParserError parserError) {
+        clearTokenList(tokenList);
+        ui->console->append(makeFont(errorColor, "error:&nbsp;") + parserError.what());
+        return;
+    }
+    ui->cmd->setText("? ");
+    clearTokenList(tokenList);
+    delete statement;
+}
+
 void MainWindow::on_cmd_returnPressed() {
-    QString str = ui->cmd->text();
+    QString text = ui->cmd->text();
     ui->console->moveCursor(QTextCursor::End);
-    ui->console->insertHtml(makeFont("white", str));
+    ui->console->insertHtml(makeFont("white", text));
     ui->cmd->clear();
-    str = str.trimmed();
-    QString cmd = str.section(' ', 0, 0);
-    str = str.section(' ', 1).trimmed();
+    text = text.trimmed();
+    QString cmd = text.section(' ', 0, 0);
+    QString str = text.section(' ', 1, -1).trimmed();
     bool isNumber;
     qsizetype lineList = cmd.toLongLong(&isNumber);
     if (isNumber) {
-        if (!str.isEmpty()) { 
-            setCode(lineList, str); 
+        if (!str.isEmpty()) {
+            setCode(lineList, str);
         } else { removeCode(lineList); }
     } else if (cmd == "clear" || cmd == "CLEAR" || cmd == "c") {
         clear();
@@ -205,6 +277,12 @@ void MainWindow::on_cmd_returnPressed() {
         help();
     } else if (cmd == "quit" || cmd == "QUIT" || cmd == "q") {
         exit(0);
+    } else if (cmd == "PRINT") {
+        immediatelyPrint(str);
+    } else if (cmd == "LET") {
+        immediatelyLet(text);
+    } else if (cmd == "INPUT") {
+        immediatelyInput(text);
     } else if (cmd == "?") {
         emit inputed(str);
     } else { ui->console->append(makeFont(errorColor, "error:&nbsp;") + "illegal command."); }

@@ -4,7 +4,6 @@
 #include "evalstate.h"
 #include <functional>
 #include <QtCore/qfile.h>
-#include <QtCore/qtextstream.h>
 
 struct Line {
 	QString code;

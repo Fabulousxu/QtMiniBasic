@@ -43,17 +43,21 @@ void MiniBasic::loadCode(const QString &filename) {
 	QFile *file = new QFile(filename);
 	if (!file->open(QIODevice::ReadOnly | QIODevice::Text)) { throw QString("no such file."); }
 	QString code;
-	size_t lineList;
+	size_t line;
 	bool isNum;
-	QTextStream stream(file);
-	while (!(code = file->readLine()).isEmpty()) {
-		code = code.trimmed();
-		lineList = code.section(' ', 0, 0).toLongLong(&isNum);
+	while (!file->atEnd()) {
+		code = file->readLine().trimmed();
+		line = code.section(' ', 0, 0).toLongLong(&isNum);
 		if (!isNum) { continue; }
-		code = code.section(' ', 1);
-		try { setCode(lineList, code); }
-		catch (QString error) {}
-	} 
+		code = code.section(' ', 1).trimmed();
+		if (code.isEmpty()) {
+			try { removeCode(line); }
+			catch (QString error) {}
+		} else {
+			try { setCode(line, code); }
+			catch (QString error) {}
+		}
+	}
 	file->close();
 }
 

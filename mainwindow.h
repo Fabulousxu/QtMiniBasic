@@ -5,6 +5,7 @@
 #include "minibasic.h"
 #include <qfiledialog.h>
 #include <qeventloop.h>
+#include <QtCore/qtextstream.h>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindowClass; };
@@ -27,6 +28,9 @@ public:
     void run();
     void kill();
     void help();
+    void immediatelyPrint(const QString &code);
+    void immediatelyLet(const QString &code);
+    void immediatelyInput(const QString &code);
     void on_cmd_returnPressed();
 
 private:

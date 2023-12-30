@@ -29,16 +29,6 @@ qint64 EvaluationState::getValue(Expression *expression) {
 	return val1 op val2; \
 	}
 
-#define GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(op) { \
-	qint64 val1, val2; \
-	try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); } \
-	catch (RuntimeError error) { throw error; } \
-	try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); } \
-	catch (RuntimeError error) { throw error; } \
-	if (!val2) { throw RuntimeError("divide or mod zero."); } \
-	return val1 op val2; \
-	}
-
 	switch (((OperatorExpression *)expression)->value) {
 		case POWER: {
 			qint64 val1, val2;
@@ -51,8 +41,31 @@ qint64 EvaluationState::getValue(Expression *expression) {
 		case POSITIVE: GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION(+)
 		case NEGATIVE: GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION(-)
 		case TIMES: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(*)
-		case OVER: GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(/ )
-		case MOD: GET_VALUE_OF_OVER_OR_MOD_EXPRESSION(%)
+		case OVER: {
+			qint64 val1, val2;
+			try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); }
+			catch (RuntimeError error) { throw error; }
+			try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); }
+			catch (RuntimeError error) { throw error; }
+			if (!val2) { throw RuntimeError("divide zero."); }
+			return val1 / val2;
+		}
+		case MOD: {
+			qint64 val1, val2;
+			try { val1 = getValue(((BinaryOperatorExpression *)expression)->left); }
+			catch (RuntimeError error) { throw error; }
+			try { val2 = getValue(((BinaryOperatorExpression *)expression)->right); }
+			catch (RuntimeError error) { throw error; }
+			if (!val2) { throw RuntimeError("mod zero."); }
+			if (!val1) { return 0; }
+			if ((val1 > 0 && val2 > 0) || (val1 < 0 && val2 < 0)) {
+				return val1 % val2;
+			} else {
+				qint64 quotient = val1 / val2;
+				if (val1 % val2) { --quotient; }
+				return val1 - quotient * val2;
+			};
+		}
 		case PLUS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(+)
 		case MINUS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(-)
 		case LESS: GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION(< )
@@ -64,7 +77,6 @@ qint64 EvaluationState::getValue(Expression *expression) {
 	}
 #undef GET_VALUE_OF_UNARY_OPERATOR_EXPRESSION
 #undef GET_VALUE_OF_BINARY_OPERATOR_EXPRESSION
-#undef GET_VALUE_OF_OVER_OR_MOD_EXPRESSION
 }
 
 qint64 EvaluationState::getValue(const QString &variable) {
